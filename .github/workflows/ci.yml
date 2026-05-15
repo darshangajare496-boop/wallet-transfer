@@ -35,30 +35,32 @@ jobs:
 
       - name: Install golangci-lint
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/.local/bin v1.64.8 echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Validate commands configured
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${LINT_CMD:-}" || { echo "Missing repository variable LINT_CMD"; exit 1; }
-          test -n "${FORMAT_CHECK_CMD:-}" || { echo "Missing repository variable FORMAT_CHECK_CMD"; exit 1; }
-          test -n "${TEST_CMD:-}" || { echo "Missing repository variable TEST_CMD"; exit 1; }
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/.local/bin v1.64.8
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run lint
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "${LINT_CMD:-}" ]; then
+            LINT_CMD='golangci-lint run ./...'
+          fi
           eval "$LINT_CMD"
 
       - name: Run format check
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "${FORMAT_CHECK_CMD:-}" ]; then
+            FORMAT_CHECK_CMD='test -z "$(gofmt -l .)"'
+          fi
           eval "$FORMAT_CHECK_CMD"
 
       - name: Run tests
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "${TEST_CMD:-}" ]; then
+            TEST_CMD='go test ./... -race -cover'
+          fi
           eval "$TEST_CMD"
