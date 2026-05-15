@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"strconv"
 	"sync"
@@ -80,7 +81,11 @@ func createWallets(t *testing.T, db *database.Connection, fromBalance, toBalance
 	if err != nil {
 		t.Fatalf("failed to begin tx: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+			t.Fatalf("failed to rollback tx: %v", rbErr)
+		}
+	}()
 
 	fromWallet := walletdomain.NewWallet(uuid.NewString(), uuid.NewString(), "USD")
 	fromWallet.Balance = fromBalance
@@ -128,7 +133,11 @@ func TestTransferCreatesBalancedLedgerAndUpdatesBalances(t *testing.T) {
 	// Verify balances
 	tx, err := db.BeginTx(ctx)
 	assert.NoError(t, err)
-	defer tx.Rollback()
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+			t.Fatalf("failed to rollback tx: %v", rbErr)
+		}
+	}()
 
 	fromWallet, err := walletRepo.GetByID(ctx, tx, fromWalletID)
 	assert.NoError(t, err)
@@ -184,7 +193,11 @@ func TestTransferIsIdempotent(t *testing.T) {
 	// Ensure only one transfer and correct balances
 	tx, err := db.BeginTx(ctx)
 	assert.NoError(t, err)
-	defer tx.Rollback()
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+			t.Fatalf("failed to rollback tx: %v", rbErr)
+		}
+	}()
 
 	fromWallet, err := walletRepo.GetByID(ctx, tx, fromWalletID)
 	assert.NoError(t, err)
@@ -243,7 +256,11 @@ func TestConcurrentTransfersDoNotDoubleSpend(t *testing.T) {
 
 	tx, err := db.BeginTx(ctx)
 	assert.NoError(t, err)
-	defer tx.Rollback()
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+			t.Fatalf("failed to rollback tx: %v", rbErr)
+		}
+	}()
 
 	fromWallet, err := walletRepo.GetByID(ctx, tx, fromWalletID)
 	assert.NoError(t, err)

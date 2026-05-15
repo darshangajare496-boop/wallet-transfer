@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"wallet-transfer/internal/wallet/dto"
 	"wallet-transfer/internal/wallet/service"
 	"wallet-transfer/pkg/errors"
@@ -26,7 +28,7 @@ func NewWalletHandler(svc *service.WalletService, logger *logger.Logger) *Wallet
 
 // GetWallet handles GET /wallets/{walletId}
 func (h *WalletHandler) GetWallet(w http.ResponseWriter, r *http.Request) {
-	walletID := r.PathValue("walletId")
+	walletID := mux.Vars(r)["walletId"]
 	if walletID == "" {
 		h.sendError(w, errors.ErrInvalidRequest.WithDetails("reason", "walletId is required"))
 		return
@@ -51,7 +53,7 @@ func (h *WalletHandler) GetWallet(w http.ResponseWriter, r *http.Request) {
 
 // GetBalance handles GET /wallets/{walletId}/balance
 func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	walletID := r.PathValue("walletId")
+	walletID := mux.Vars(r)["walletId"]
 	if walletID == "" {
 		h.sendError(w, errors.ErrInvalidRequest.WithDetails("reason", "walletId is required"))
 		return
@@ -104,5 +106,9 @@ func (h *WalletHandler) sendError(w http.ResponseWriter, err *errors.CustomError
 	if len(err.Details) > 0 {
 		response["details"] = err.Details
 	}
-	json.NewEncoder(w).Encode(response)
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+		h.logger.Error("failed to encode JSON error response", map[string]interface{}{
+			"error": encodeErr.Error(),
+		})
+	}
 }

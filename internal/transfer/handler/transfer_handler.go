@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"wallet-transfer/internal/transfer/dto"
 	"wallet-transfer/internal/transfer/service"
 	"wallet-transfer/pkg/errors"
@@ -43,7 +45,7 @@ func (h *TransferHandler) CreateTransfer(w http.ResponseWriter, r *http.Request)
 
 // GetTransfer handles GET /transfers/{transferId}
 func (h *TransferHandler) GetTransfer(w http.ResponseWriter, r *http.Request) {
-	transferID := r.PathValue("transferId")
+	transferID := mux.Vars(r)["transferId"]
 	if transferID == "" {
 		h.sendError(w, errors.ErrInvalidRequest.WithDetails("reason", "transferId is required"))
 		return
@@ -91,5 +93,9 @@ func (h *TransferHandler) sendError(w http.ResponseWriter, err *errors.CustomErr
 		Message: err.Message,
 		Details: err.Details,
 	}
-	json.NewEncoder(w).Encode(response)
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+		h.logger.Error("failed to encode JSON error response", map[string]interface{}{
+			"error": encodeErr.Error(),
+		})
+	}
 }
