@@ -75,7 +75,11 @@ func (h *TransferHandler) handleServiceError(w http.ResponseWriter, err error) {
 func (h *TransferHandler) sendJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Error("failed to encode JSON response", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
 }
 
 // sendError sends an error response
